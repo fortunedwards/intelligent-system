@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Course Scheduler{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link
+        rel="stylesheet"
+        as="style"
+        onload="this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?display=swap&family=Inter%3Awght@400;500;700;900&family=Noto+Sans%3Awght@400;500;700;900"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/heroicons/dist/2.1.1/umd/heroicons.umd.js"></script>
+    <style>
+        .active-link {
+            border-bottom: 2px solid #0d78f2;
+            color: #0d78f2;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="bg-[#f7f8f9]" style='font-family: Inter, "Noto Sans", sans-serif;'>
+    <div class="relative flex size-full min-h-screen flex-col bg-white group/design-root overflow-x-hidden">
+        <div class="layout-container flex h-full grow flex-col">
+            <header class="flex items-center justify-between px-6 py-4 bg-white shadow-sm border-b">
+                <div class="flex items-center gap-2 text-gray-900">
+                    <h2 class="text-[#111418] text-xl font-bold leading-tight tracking-[-0.015em]">Course Scheduler</h2>
+                </div>
+                <nav class="flex items-center gap-6">
+                    <a class="px-2 py-1 text-sm font-medium {% if active_page == 'index' %}active-link{% else %}text-[#60748a] hover:text-[#0d78f2]{% endif %}" href="{{ url_for('index') }}">Dashboard</a>
+                    <a class="px-2 py-1 text-sm font-medium {% if active_page == 'data_management' %}active-link{% else %}text-[#60748a] hover:text-[#0d78f2]{% endif %}" href="{{ url_for('data_management', type='lecturers') }}">Manage Data</a>
+                    <a class="px-2 py-1 text-sm font-medium {% if active_page == 'settings' %}active-link{% else %}text-[#60748a] hover:text-[#0d78f2]{% endif %}" href="{{ url_for('settings') }}">Settings</a>
+                </nav>
+            </header>
+            <div class="flex-1 p-6">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

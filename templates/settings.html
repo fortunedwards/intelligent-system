@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Settings - Course Scheduler{% endblock %}
+
+{% block content %}
+<div class="px-40 flex flex-1 justify-center py-5">
+    <div class="layout-content-container flex flex-col max-w-[960px] flex-1">
+        <div class="flex flex-wrap justify-between gap-3 p-4">
+            <p class="text-[#111418] tracking-light text-[32px] font-bold leading-tight min-w-72">Admin Settings</p>
+        </div>
+        <div class="p-4 @container">
+            <div class="flex flex-col items-stretch justify-start rounded-lg bg-white shadow-md @xl:flex-row @xl:items-start p-6">
+                <div class="flex w-full min-w-72 grow flex-col items-stretch justify-center gap-1 py-4 @xl:px-4">
+                    <p class="text-[#111418] text-lg font-bold leading-tight tracking-[-0.015em]">Genetic Algorithm Parameters</p>
+                    <div class="flex items-end gap-3 justify-between">
+                        <div class="flex flex-col gap-1">
+                            <p class="text-[#60748a] text-base font-normal leading-normal">
+                                Population Size: **{{ settings.ga_population_size }}**<br>
+                                Generations: **{{ settings.ga_generations }}**<br>
+                                Mutation Rate: **{{ settings.ga_mutation_rate }}**<br>
+                                Crossover Rate: **{{ settings.ga_crossover_rate }}**
+                            </p>
+                        </div>
+                        <button
+                            class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-8 px-4 bg-[#0d78f2] text-white text-sm font-medium leading-normal"
+                            onclick="showEditModal('genetic_algorithm')"
+                        >
+                            <span class="truncate">Edit</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="p-4 @container">
+            <div class="flex flex-col items-stretch justify-start rounded-lg bg-white shadow-md @xl:flex-row @xl:items-start p-6">
+                <div class="flex w-full min-w-72 grow flex-col items-stretch justify-center gap-1 py-4 @xl:px-4">
+                    <p class="text-[#111418] text-lg font-bold leading-tight tracking-[-0.015em]">Scheduling Constraints</p>
+                    <div class="flex items-end gap-3 justify-between">
+                        <div class="flex flex-col gap-1">
+                            <p class="text-[#60748a] text-base font-normal leading-normal">
+                                Max Lecturer Hours per Week: **{{ settings.max_lecturer_hours_per_week }}**
+                            </p>
+                        </div>
+                        <button
+                            class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-8 px-4 bg-[#0d78f2] text-white text-sm font-medium leading-normal"
+                            onclick="showEditModal('scheduling_constraints')"
+                        >
+                            <span class="truncate">Edit</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="edit-modal" class="fixed inset-0 z-50 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="sm:flex sm:items-start">
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title"></h3>
+                        <div class="mt-2" id="modal-body"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-[#0d78f2] text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm" onclick="saveSettings()">Save</button>
+                <button type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentEditType = '';
+    
+    function showEditModal(type) {
+        currentEditType = type;
+        const modal = document.getElementById('edit-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalBody = document.getElementById('modal-body');
+
+        modal.classList.remove('hidden');
+
+        if (type === 'genetic_algorithm') {
+            modalTitle.textContent = "Edit Genetic Algorithm Parameters";
+            modalBody.innerHTML = `
+                <form id="ga-form">
+                    <div class="mt-2">
+                        <label class="block text-sm font-medium text-gray-700">Population Size</label>
+                        <input type="number" name="ga_population_size" value="{{ settings.ga_population_size }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div class="mt-2">
+                        <label class="block text-sm font-medium text-gray-700">Generations</label>
+                        <input type="number" name="ga_generations" value="{{ settings.ga_generations }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div class="mt-2">
+                        <label class="block text-sm font-medium text-gray-700">Mutation Rate</label>
+                        <input type="number" step="0.01" name="ga_mutation_rate" value="{{ settings.ga_mutation_rate }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div class="mt-2">
+                        <label class="block text-sm font-medium text-gray-700">Crossover Rate</label>
+                        <input type="number" step="0.01" name="ga_crossover_rate" value="{{ settings.ga_crossover_rate }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                </form>
+            `;
+        } else if (type === 'scheduling_constraints') {
+            modalTitle.textContent = "Edit Scheduling Constraints";
+            modalBody.innerHTML = `
+                <form id="constraints-form">
+                    <div class="mt-2">
+                        <label class="block text-sm font-medium text-gray-700">Max Lecturer Hours per Week</label>
+                        <input type="number" name="max_lecturer_hours_per_week" value="{{ settings.max_lecturer_hours_per_week }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                </form>
+            `;
+        }
+    }
+    
+    function closeModal() {
+        document.getElementById('edit-modal').classList.add('hidden');
+    }
+    
+    function saveSettings() {
+        let formId = '';
+        let url = '/update_settings';
+        let data = {};
+
+        if (currentEditType === 'genetic_algorithm') {
+            formId = 'ga-form';
+            const form = document.getElementById(formId);
+            data = {
+                ga_population_size: parseInt(form.ga_population_size.value),
+                ga_generations: parseInt(form.ga_generations.value),
+                ga_mutation_rate: parseFloat(form.ga_mutation_rate.value),
+                ga_crossover_rate: parseFloat(form.ga_crossover_rate.value)
+            };
+        } else if (currentEditType === 'scheduling_constraints') {
+            formId = 'constraints-form';
+            const form = document.getElementById(formId);
+            data = {
+                max_lecturer_hours_per_week: parseInt(form.max_lecturer_hours_per_week.value)
+            };
+        }
+        
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        }).then(response => response.json())
+          .then(result => {
+            if (result.success) {
+                alert(result.message);
+                closeModal();
+                window.location.reload();
+            } else {
+                alert(result.message);
+            }
+        });
+    }
+</script>
+{% endblock %}

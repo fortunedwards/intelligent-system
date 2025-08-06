@@ -1,0 +1,7 @@
+{
+    "ga_population_size": 100,
+    "ga_generations": 200,
+    "ga_mutation_rate": 0.05,
+    "ga_crossover_rate": 0.7,
+    "max_lecturer_hours_per_week": 20
+}
