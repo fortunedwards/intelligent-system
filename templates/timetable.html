@@ -1,124 +1,185 @@
 {% extends "base.html" %}
 
-{% block title %}{{ page_title }} - Course Scheduler{% endblock %}
+{% block title %}
+    {{ page_title }}
+{% endblock %}
 
 {% block content %}
-<div class="p-4">
-    <div class="flex justify-between items-center mb-6">
-        <p class="text-[#111418] tracking-light text-[32px] font-bold leading-tight">{{ page_title }}</p>
-        <div>
-            {% if departments %}
-            <select id="department-filter" class="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" onchange="filterTimetable()">
-                <option value="">All Departments</option>
-                {% for department in departments %}
-                <option value="{{ department }}">{{ department }}</option>
-                {% endfor %}
-            </select>
+<div class="px-40 flex flex-1 justify-center py-5">
+    <div class="layout-content-container flex flex-col max-w-[960px] flex-1">
+        <div class="flex flex-wrap justify-between gap-3 p-4">
+            <p class="text-[#0d141c] tracking-light text-[32px] font-bold leading-tight min-w-72">{{ page_title }}</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="p-4">
+                    {% for category, message in messages %}
+                        <div class="mb-4 rounded-lg px-6 py-5 text-base text-white {{ 'bg-red-500' if category == 'error' else 'bg-yellow-500' if category == 'warning' else 'bg-green-500' }}" role="alert">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
             {% endif %}
+        {% endwith %}
+        
+        {% if timetable %}
+        <div class="flex items-center justify-between p-4 bg-gray-100 rounded-md">
+            <div class="flex items-center">
+                <label for="department-filter" class="mr-2 text-sm font-medium text-gray-700">Filter by Department:</label>
+                <select id="department-filter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                    <option value="">All Departments</option>
+                    {% for dept_id, dept_name in departments.items() %}
+                    <option value="{{ dept_id }}">{{ dept_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
             
-            {% if not is_saved %}
-            <button id="save-btn" class="ml-4 flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-[#0d78f2] text-white text-sm font-bold leading-normal tracking-[0.015em] min-w-0" onclick="saveTimetable()">
+            {% if is_saved %}
+            <a id="download-pdf-link" href="#" class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-[#0d80f2] text-slate-50 text-sm font-bold leading-normal tracking-[0.015em]">
+                <span class="truncate">Download PDF</span>
+            </a>
+            {% else %}
+            <button onclick="saveTimetable()" class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-green-500 text-slate-50 text-sm font-bold leading-normal tracking-[0.015em]">
                 <span class="truncate">Save Timetable</span>
             </button>
             {% endif %}
         </div>
+        
+        <div class="p-4 overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 bg-white shadow-md rounded-lg overflow-hidden">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Day</th>
+                        {% for slot in time_slots %}
+                        <th class="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{{ slot }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200" id="timetable-body">
+                    </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-4 text-center text-gray-500">
+            <p>No timetable generated yet or no courses to schedule.</p>
+            <p>Please add courses with lectures per week and try generating a timetable again.</p>
+        </div>
+        {% endif %}
     </div>
-
-    {% if message %}
-        <div class="text-center text-gray-500 py-8">{{ message }}</div>
-    {% elif timetable %}
-    <div class="overflow-x-auto bg-white rounded-lg shadow-md">
-        <table id="timetable-table" class="min-w-full divide-y divide-gray-200">
-            <thead>
-                <tr class="bg-gray-100">
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-                    {% for day in days %}
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{{ day }}</th>
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                {% for time_slot in time_slots %}
-                <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ time_slot.strftime('%H:%M') }}</td>
-                    {% for day in days %}
-                    <td class="px-6 py-4">
-                        {% set event = timetable[time_slot][day] %}
-                        {% if event %}
-                        <div class="p-2 rounded-lg bg-blue-100 border border-blue-200 text-sm" data-department="{{ event.department }}">
-                            <p class="font-bold text-gray-900">{{ event.course_title }}</p>
-                            <p class="text-gray-600">{{ event.lecturer_names }}</p>
-                            <p class="text-gray-600">Room: {{ event.room_name }}</p>
-                            <p class="text-gray-600">Level: {{ event.level }}</p>
-                        </div>
-                        {% endif %}
-                    </td>
-                    {% endfor %}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% endif %}
 </div>
 
 <script>
-    function saveTimetable() {
-        fetch('/save_timetable', {
-            method: 'POST'
-        }).then(response => response.json())
-          .then(data => {
-              alert(data.message);
-              if (data.success) {
-                  window.location.reload();
-              }
-          });
-    }
+    const originalTimetableData = JSON.parse('{{ timetable | tojson | safe }}');
+    const allDepartments = JSON.parse('{{ departments | tojson | safe }}');
+    const timetableBody = document.getElementById('timetable-body');
+    const departmentFilter = document.getElementById('department-filter');
+    const downloadLink = document.getElementById('download-pdf-link');
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        renderTimetable(originalTimetableData);
+        if (downloadLink) {
+            updateDownloadLink('');
+        }
+    });
 
-    function filterTimetable() {
-        const departmentFilter = document.getElementById('department-filter').value;
-        const events = document.querySelectorAll('#timetable-table [data-department]');
-        
-        events.forEach(eventDiv => {
-            if (departmentFilter === '' || eventDiv.getAttribute('data-department') === departmentFilter) {
-                eventDiv.closest('td').style.display = '';
-            } else {
-                eventDiv.closest('td').style.display = 'none';
-            }
-        });
-        
-        const allDays = document.querySelectorAll('thead th:not(:first-child)');
-        allDays.forEach(dayHeader => {
-            let hasVisibleEvents = false;
-            const columnIndex = Array.from(dayHeader.parentNode.children).indexOf(dayHeader);
-            document.querySelectorAll('tbody tr').forEach(row => {
-                const cell = row.children[columnIndex];
-                if (cell && cell.querySelector('[data-department]:not([style*="display: none"])')) {
-                    hasVisibleEvents = true;
+    departmentFilter.addEventListener('change', (event) => {
+        const selectedDeptId = event.target.value;
+        const filteredData = filterTimetable(selectedDeptId, originalTimetableData);
+        renderTimetable(filteredData);
+        if (downloadLink) {
+            updateDownloadLink(selectedDeptId);
+        }
+    });
+
+    function filterTimetable(departmentId, timetableData) {
+        if (!departmentId) {
+            return timetableData;
+        }
+
+        const filtered = {};
+        for (const day in timetableData) {
+            filtered[day] = {};
+            for (const timeSlot in timetableData[day]) {
+                const events = timetableData[day][timeSlot];
+                const filteredEvents = events.filter(event => {
+                    return event.department_ids && event.department_ids.some(d_id => d_id === departmentId);
+                });
+                if (filteredEvents.length > 0) {
+                    filtered[day][timeSlot] = filteredEvents;
                 }
+            }
+        }
+        return filtered;
+    }
+
+    function renderTimetable(data) {
+        timetableBody.innerHTML = '';
+        const days = JSON.parse('{{ days | tojson | safe }}');
+        const timeSlots = JSON.parse('{{ time_slots | tojson | safe }}');
+        
+        days.forEach(day => {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td class="py-4 px-6 whitespace-nowrap text-sm font-medium text-gray-900">${day}</td>`;
+            
+            timeSlots.forEach(slot => {
+                const cell = document.createElement('td');
+                cell.className = "py-4 px-6 text-sm text-gray-500";
+                
+                const events = data[day] ? data[day][slot] : [];
+                if (events) {
+                    events.forEach(event => {
+                        const eventDiv = document.createElement('div');
+                        eventDiv.className = "mb-2";
+                        const lecturerNames = event.lecturer_names.filter(name => name).join(', ');
+                        eventDiv.innerHTML = `
+                            <p class="font-bold">${event.course_name}</p>
+                            <p class="text-xs">Room: ${event.room_name}</p>
+                            <p class="text-xs">Lecturer: ${lecturerNames || 'N/A'}</p>
+                        `;
+                        cell.appendChild(eventDiv);
+                    });
+                }
+                row.appendChild(cell);
             });
-
-            if (hasVisibleEvents) {
-                dayHeader.style.display = '';
-            } else {
-                dayHeader.style.display = 'none';
-            }
-        });
-
-        // Show/hide time slots based on events
-        const rows = document.querySelectorAll('tbody tr');
-        rows.forEach(row => {
-            const hasVisibleEventsInRow = Array.from(row.querySelectorAll('td:not(:first-child)'))
-                                            .some(cell => cell.querySelector('[data-department]:not([style*="display: none"])'));
-            if (hasVisibleEventsInRow) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
+            timetableBody.appendChild(row);
         });
     }
 
-    // Initial filter on page load if a department is selected
-    document.addEventListener('DOMContentLoaded', filterTimetable);
+    function updateDownloadLink(departmentId) {
+        const timetableId = '{{ timetable_id }}';
+        let url = `/download_timetable/${timetableId}`;
+        if (departmentId) {
+            url += `?department_id=${departmentId}`;
+        }
+        downloadLink.href = url;
+    }
+
+    function saveTimetable() {
+        const departmentNames = Object.values(allDepartments);
+        const department_name = '{{ selected_department }}' || "All Departments";
+        
+        fetch('/save_timetable', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                timetable_data: originalTimetableData, 
+                department_name: department_name
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Timetable saved successfully!');
+                window.location.href = '/';
+            } else {
+                alert('Failed to save timetable: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while saving the timetable.');
+        });
+    }
 </script>
 {% endblock %}

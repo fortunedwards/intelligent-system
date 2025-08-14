@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Course Scheduler{% endblock %}
+{% block title %}Dashboard - Timetable Generator{% endblock %}
 
 {% block content %}
 <div class="px-40 flex flex-1 justify-center py-5">
@@ -8,50 +8,63 @@
         <div class="flex flex-wrap justify-between gap-3 p-4">
             <p class="text-[#111418] tracking-light text-[32px] font-bold leading-tight min-w-72">Dashboard</p>
             <div class="flex items-center gap-3">
-                <button id="generate-btn" class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-[#0d78f2] text-white text-sm font-bold leading-normal tracking-[0.015em] min-w-0" onclick="window.location.href='{{ url_for('generate_timetable') }}'">
+                <button
+                    id="generate-btn"
+                    class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-8 px-4 bg-[#f0f2f5] text-[#111418] text-sm font-medium leading-normal"
+                    onclick="window.location.href='{{ url_for('generate_timetable_route') }}'"
+                >
                     <span class="truncate">Generate New Timetable</span>
                 </button>
             </div>
         </div>
         
-        <div class="p-4">
-            <div class="flex flex-wrap justify-between gap-3 mb-4">
-                <p class="text-[#111418] tracking-light text-xl font-bold leading-tight">Saved Timetables</p>
-            </div>
-            {% if saved_timetables %}
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {% for timetable in saved_timetables %}
-                <div class="bg-white p-4 rounded-lg shadow-md border border-gray-200">
-                    <h3 class="font-bold text-lg text-gray-900">{{ timetable.timestamp[:10] }}</h3>
-                    <p class="text-sm text-gray-600">Saved at: {{ timetable.timestamp[11:16] }}</p>
-                    <div class="mt-4 flex gap-2">
-                        <a href="{{ url_for('view_saved_timetable', timetable_id=timetable._id) }}" class="flex-1 text-center py-2 px-4 bg-[#e5e7eb] hover:bg-[#d1d5db] text-[#111418] rounded-lg text-sm font-medium">View</a>
-                        <button onclick="deleteTimetable('{{ timetable._id }}')" class="flex-1 text-center py-2 px-4 bg-[#f87171] hover:bg-[#dc2626] text-white rounded-lg text-sm font-medium">Delete</button>
-                    </div>
+        <h2 class="text-[#111418] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">Saved Timetables</h2>
+        
+        {% if saved_timetables %}
+        <div class="p-4 grid grid-cols-2 gap-4">
+            {% for timetable in saved_timetables %}
+            <div class="flex items-center justify-between gap-4 p-4 rounded-lg bg-white shadow">
+                <div class="flex-1">
+                    <p class="text-[#111418] text-base font-semibold leading-normal">{{ timetable.name }}</p>
+                    <p class="text-[#49739c] text-sm font-normal leading-normal">Created on {{ timetable.created_at }}</p>
                 </div>
-                {% endfor %}
+                <div class="flex items-center gap-2">
+                    <a href="{{ url_for('view_saved_timetable', timetable_id=timetable._id) }}" class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-8 px-4 bg-[#f0f2f5] text-[#111418] text-sm font-medium leading-normal w-fit">
+                        <span class="truncate">View</span>
+                    </a>
+                    <button onclick="deleteTimetable('{{ timetable._id }}')" class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-8 px-4 bg-red-600 text-white text-sm font-medium leading-normal w-fit">
+                        <span class="truncate">Delete</span>
+                    </button>
+                </div>
             </div>
-            {% else %}
-            <div class="text-gray-500 text-center py-8">
-                <p>No saved timetables found.</p>
-            </div>
-            {% endif %}
+            {% endfor %}
         </div>
+        {% else %}
+        <div class="text-gray-500 text-center py-8">
+            <p>No saved timetables found.</p>
+        </div>
+        {% endif %}
     </div>
 </div>
 
 <script>
     function deleteTimetable(timetableId) {
         if (confirm("Are you sure you want to delete this timetable?")) {
-            fetch(`/delete/saved_timetables/${timetableId}`, {
-                method: 'DELETE'
-            }).then(response => {
-                if (response.ok) {
-                    location.reload();
-                } else {
-                    alert("Failed to delete timetable.");
-                }
-            });
+            fetch(`/delete_saved_timetable/${timetableId}`, {
+                method: 'POST'
+            }).then(response => response.json())
+              .then(result => {
+                  if (result.success) {
+                      alert(result.message);
+                      window.location.reload();
+                  } else {
+                      alert('Failed to delete timetable: ' + result.message);
+                  }
+              })
+              .catch(error => {
+                  console.error('Error:', error);
+                  alert('An error occurred while trying to delete the timetable.');
+              });
         }
     }
 </script>

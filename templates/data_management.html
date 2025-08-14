@@ -1,398 +1,359 @@
 {% extends "base.html" %}
 
-{% block title %}Manage Data - Course Scheduler{% endblock %}
+{% block title %}Manage Data{% endblock %}
 
 {% block content %}
-<div class="p-4 @container">
-    <div class="flex flex-col items-stretch justify-start rounded-lg bg-white p-6 shadow-md">
-        <h2 class="text-2xl font-bold text-gray-900 mb-4">Manage University Data</h2>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
 
-        <div class="flex border-b border-gray-200 mb-6">
-            <button class="py-2 px-4 text-sm font-medium {% if active_tab == 'lecturers' %}text-[#0d78f2] border-b-2 border-[#0d78f2]{% else %}text-gray-500 hover:text-gray-700{% endif %}" onclick="window.location.href='{{ url_for('data_management', type='lecturers') }}'">Lecturers</button>
-            <button class="py-2 px-4 text-sm font-medium {% if active_tab == 'rooms' %}text-[#0d78f2] border-b-2 border-[#0d78f2]{% else %}text-gray-500 hover:text-gray-700{% endif %}" onclick="window.location.href='{{ url_for('data_management', type='rooms') }}'">Rooms</button>
-            <button class="py-2 px-4 text-sm font-medium {% if active_tab == 'departments' %}text-[#0d78f2] border-b-2 border-[#0d78f2]{% else %}text-gray-500 hover:text-gray-700{% endif %}" onclick="window.location.href='{{ url_for('data_management', type='departments') }}'">Departments</button>
-            <button class="py-2 px-4 text-sm font-medium {% if active_tab == 'courses' %}text-[#0d78f2] border-b-2 border-[#0d78f2]{% else %}text-gray-500 hover:text-gray-700{% endif %}" onclick="window.location.href='{{ url_for('data_management', type='courses') }}'">Courses</button>
+<div class="px-40 flex flex-1 justify-center py-5">
+    <div class="layout-content-container flex flex-col max-w-[960px] flex-1">
+        <div class="flex flex-wrap justify-between gap-3 p-4">
+            <p class="text-[#0d141c] tracking-light text-[32px] font-bold leading-tight min-w-72">Manage Data</p>
         </div>
 
-        <div>
-            {% if active_tab == 'lecturers' %}
-            <div id="lecturers-tab">
-                <div class="flex flex-wrap justify-between gap-3 mb-4">
-                    <p class="text-lg font-bold text-[#111418]">Lecturers</p>
-                    <button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-8 px-4 bg-[#0d78f2] text-white text-sm font-medium leading-normal" onclick="showAddModal('lecturer')">
-                        <span class="truncate">Add Lecturer</span>
-                    </button>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full bg-white rounded-lg shadow-md">
-                        <thead>
-                            <tr class="text-left text-sm font-semibold text-gray-600 border-b">
-                                <th class="py-3 px-4">Name</th>
-                                <th class="py-3 px-4">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for lecturer in lecturers %}
-                            <tr class="border-b last:border-b-0 text-sm">
-                                <td class="py-3 px-4">{{ lecturer.name }}</td>
-                                <td class="py-3 px-4">
-                                    <button class="text-red-500 hover:text-red-700" onclick="deleteItem('teachers', '{{ lecturer._id }}')">Delete</button>
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="2" class="py-3 px-4 text-center text-gray-500">No lecturers added yet.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+        <div class="pb-3">
+            <div class="flex border-b border-[#cedbe8] px-4 gap-8">
+                <a class="flex flex-col items-center justify-center border-b-[3px] {% if active_tab == 'lecturers' %}border-b-[#0d80f2] text-[#0d141c]{% else %}border-b-transparent text-[#49739c]{% endif %} pb-[13px] pt-4" href="{{ url_for('data_management', type='lecturers') }}">
+                    <p class="text-sm font-bold leading-normal tracking-[0.015em]">Lecturers</p>
+                </a>
+                <a class="flex flex-col items-center justify-center border-b-[3px] {% if active_tab == 'rooms' %}border-b-[#0d80f2] text-[#0d141c]{% else %}border-b-transparent text-[#49739c]{% endif %} pb-[13px] pt-4" href="{{ url_for('data_management', type='rooms') }}">
+                    <p class="text-sm font-bold leading-normal tracking-[0.015em]">Rooms</p>
+                </a>
+                <a class="flex flex-col items-center justify-center border-b-[3px] {% if active_tab == 'departments' %}border-b-[#0d80f2] text-[#0d141c]{% else %}border-b-transparent text-[#49739c]{% endif %} pb-[13px] pt-4" href="{{ url_for('data_management', type='departments') }}">
+                    <p class="text-sm font-bold leading-normal tracking-[0.015em]">Departments</p>
+                </a>
+                <a class="flex flex-col items-center justify-center border-b-[3px] {% if active_tab == 'courses' %}border-b-[#0d80f2] text-[#0d141c]{% else %}border-b-transparent text-[#49739c]{% endif %} pb-[13px] pt-4" href="{{ url_for('data_management', type='courses') }}">
+                    <p class="text-sm font-bold leading-normal tracking-[0.015em]">Courses</p>
+                </a>
             </div>
-            {% elif active_tab == 'rooms' %}
-            <div id="rooms-tab">
-                <div class="flex flex-wrap justify-between gap-3 mb-4">
-                    <p class="text-lg font-bold text-[#111418]">Rooms</p>
-                    <button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-8 px-4 bg-[#0d78f2] text-white text-sm font-medium leading-normal" onclick="showAddModal('room')">
-                        <span class="truncate">Add Room</span>
-                    </button>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full bg-white rounded-lg shadow-md">
-                        <thead>
-                            <tr class="text-left text-sm font-semibold text-gray-600 border-b">
-                                <th class="py-3 px-4">Name</th>
-                                <th class="py-3 px-4">Capacity</th>
-                                <th class="py-3 px-4">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for room in rooms %}
-                            <tr class="border-b last:border-b-0 text-sm">
-                                <td class="py-3 px-4">{{ room.name }}</td>
-                                <td class="py-3 px-4">{{ room.capacity }}</td>
-                                <td class="py-3 px-4">
-                                    <button class="text-red-500 hover:text-red-700" onclick="deleteItem('rooms', '{{ room._id }}')">Delete</button>
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="3" class="py-3 px-4 text-center text-gray-500">No rooms added yet.</td>
-                            </tr>
+        </div>
+
+        <div class="flex px-4 py-3 justify-end">
+            <button
+                class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-[#0d80f2] text-slate-50 text-sm font-bold leading-normal tracking-[0.015em]"
+                onclick="openAddModal('{{ active_tab }}')"
+            >
+                <span class="truncate">Add New</span>
+            </button>
+        </div>
+
+        <div class="p-4 overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 bg-white shadow-md rounded-lg overflow-hidden">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                        {% if active_tab == 'lecturers' %}
+                        <th class="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Departments</th>
+                        {% elif active_tab == 'rooms' %}
+                        <th class="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacity</th>
+                        {% elif active_tab == 'courses' %}
+                        <th class="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lecturers</th>
+                        <th class="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Departments</th>
+                        <th class="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lectures per Week</th>
+                        <th class="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Students</th>
+                        <th class="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Level</th>
+                        {% endif %}
+                        <th class="py-3 px-6 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for item in data %}
+                    <tr>
+                        <td class="py-4 px-6 whitespace-nowrap text-sm font-medium text-gray-900">{{ item.name }}</td>
+                        {% if active_tab == 'lecturers' %}
+                        <td class="py-4 px-6 text-sm text-gray-500">
+                            {% for dept_id in item.department_ids %}
+                                {% set dept_name = all_departments.get(dept_id) %}
+                                <span class="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700 mr-2 mb-2">{{ dept_name or 'Unknown' }}</span>
                             {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            {% elif active_tab == 'departments' %}
-            <div id="departments-tab">
-                <div class="flex flex-wrap justify-between gap-3 mb-4">
-                    <p class="text-lg font-bold text-[#111418]">Departments</p>
-                    <button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-8 px-4 bg-[#0d78f2] text-white text-sm font-medium leading-normal" onclick="showAddModal('department')">
-                        <span class="truncate">Add Department</span>
-                    </button>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full bg-white rounded-lg shadow-md">
-                        <thead>
-                            <tr class="text-left text-sm font-semibold text-gray-600 border-b">
-                                <th class="py-3 px-4">Name</th>
-                                <th class="py-3 px-4">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for department in departments %}
-                            <tr class="border-b last:border-b-0 text-sm">
-                                <td class="py-3 px-4">{{ department.name }}</td>
-                                <td class="py-3 px-4">
-                                    <button class="text-red-500 hover:text-red-700" onclick="deleteItem('departments', '{{ department._id }}')">Delete</button>
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="2" class="py-3 px-4 text-center text-gray-500">No departments added yet.</td>
-                            </tr>
+                        </td>
+                        {% elif active_tab == 'rooms' %}
+                        <td class="py-4 px-6 text-sm text-gray-500">{{ item.capacity }}</td>
+                        {% elif active_tab == 'courses' %}
+                        <td class="py-4 px-6 text-sm text-gray-500">
+                            {% for lecturer_id in item.lecturer_ids %}
+                                <span class="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700 mr-2 mb-2">{{ all_lecturers.get(lecturer_id, 'Unknown') }}</span>
                             {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            {% elif active_tab == 'courses' %}
-            <div id="courses-tab">
-                <div class="flex flex-wrap justify-between gap-3 mb-4">
-                    <p class="text-lg font-bold text-[#111418]">Courses</p>
-                    <button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-8 px-4 bg-[#0d78f2] text-white text-sm font-medium leading-normal" onclick="showAddModal('course')">
-                        <span class="truncate">Add Course</span>
-                    </button>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full bg-white rounded-lg shadow-md">
-                        <thead>
-                            <tr class="text-left text-sm font-semibold text-gray-600 border-b">
-                                <th class="py-3 px-4">Name</th>
-                                <th class="py-3 px-4">Lecturer(s)</th>
-                                <th class="py-3 px-4">Lectures per Week</th>
-                                <th class="py-3 px-4">Level</th>
-                                <th class="py-3 px-4">Department(s)</th>
-                                <th class="py-3 px-4">Students</th>
-                                <th class="py-3 px-4">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for course in courses %}
-                            <tr class="border-b last:border-b-0 text-sm">
-                                <td class="py-3 px-4">{{ course.name }}</td>
-                                <td class="py-3 px-4">{{ course.lecturer_names }}</td>
-                                <td class="py-3 px-4">{{ course.lectures_per_week }}</td>
-                                <td class="py-3 px-4">{{ course.level }}</td>
-                                <td class="py-3 px-4">{{ course.departments_str }}</td>
-                                <td class="py-3 px-4">{{ course.student_count }}</td>
-                                <td class="py-3 px-4">
-                                    <button class="text-red-500 hover:text-red-700" onclick="deleteItem('courses', '{{ course._id }}')">Delete</button>
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="7" class="py-3 px-4 text-center text-gray-500">No courses added yet.</td>
-                            </tr>
+                        </td>
+                        <td class="py-4 px-6 text-sm text-gray-500">
+                            {% for dept_id in item.department_ids %}
+                                {% set dept_name = all_departments.get(dept_id) %}
+                                <span class="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700 mr-2 mb-2">{{ dept_name or 'Unknown' }}</span>
                             {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            {% endif %}
+                        </td>
+                        <td class="py-4 px-6 text-sm text-gray-500">
+                            {{ item.number_of_lectures_per_week }}
+                        </td>
+                        <td class="py-4 px-6 text-sm text-gray-500">
+                            {{ item.number_of_students }}
+                        </td>
+                        <td class="py-4 px-6 text-sm text-gray-500">
+                            {{ item.level }}
+                        </td>
+                        {% endif %}
+                        <td class="py-4 px-6 whitespace-nowrap text-right text-sm font-medium">
+                            <button onclick="openEditModal('{{ active_tab }}', '{{ item._id }}')" class="text-indigo-600 hover:text-indigo-900 mx-2">Edit</button>
+                            <button onclick="deleteData('{{ active_tab }}', '{{ item._id }}')" class="text-red-600 hover:text-red-900 mx-2">Delete</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
-<div id="add-modal" class="fixed inset-0 z-50 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
-        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
-            <div class="bg-white px-4 pt-10 pb-8 sm:p-12 sm:pb-10">
-                <div class="sm:flex sm:items-start">
-                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title"></h3>
-                        <div class="mt-2" id="modal-body"></div>
+<div id="data-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3 text-center">
+            <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title"></h3>
+            <div class="mt-2 px-7 py-3">
+                <form id="data-form" onsubmit="handleFormSubmit(event)">
+                    <input type="hidden" id="item-id">
+                    <div class="mb-4">
+                        <label for="name" class="block text-sm font-medium text-gray-700">Name</label>
+                        <input type="text" id="name" name="name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
                     </div>
-                </div>
-            </div>
-            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-[#0d78f2] text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm" onclick="submitAddForm()">Save</button>
-                <button type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm" onclick="closeModal()">Cancel</button>
+                    <div id="modal-content-container">
+                        </div>
+                    <div class="items-center px-4 py-3">
+                        <button type="submit" id="modal-submit-btn" class="px-4 py-2 bg-[#0d80f2] text-white text-base font-medium rounded-md w-full shadow-sm">
+                            Submit
+                        </button>
+                        <button type="button" onclick="closeModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    function deleteItem(collection, itemId) {
-        if (confirm("Are you sure you want to delete this item?")) {
-            fetch(`/delete/${collection}/${itemId}`, {
-                method: 'DELETE'
-            }).then(response => {
-                if (response.ok) {
-                    window.location.reload();
-                } else {
-                    alert("Failed to delete item.");
+    const modal = document.getElementById('data-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const form = document.getElementById('data-form');
+    const itemIdInput = document.getElementById('item-id');
+    const activeTab = '{{ active_tab }}';
+    const modalContentContainer = document.getElementById('modal-content-container');
+    let isSelect2Initialized = false;
+
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            closeModal();
+        }
+    };
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === "Escape" && !modal.classList.contains('hidden')) {
+            closeModal();
+        }
+    });
+
+    function initSelect2(selector) {
+        $(selector).select2({
+            dropdownParent: $('#data-modal'),
+            placeholder: 'Select options...',
+            width: '100%'
+        });
+        isSelect2Initialized = true;
+    }
+
+    function generateFormContent(type, item = null) {
+        let content = '';
+        if (type === 'lecturers') {
+            content += `
+                <div class="mb-4">
+                    <label for="department_ids" class="block text-sm font-medium text-gray-700">Departments</label>
+                    <select id="department_ids" name="department_ids" class="mt-1 w-full" multiple="multiple">
+                        {% for dept in all_departments_list | sort(attribute='name') %}
+                        <option value="{{ dept._id }}">{{ dept.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            `;
+        } else if (type === 'rooms') {
+            content += `
+                <div class="mb-4">
+                    <label for="capacity" class="block text-sm font-medium text-gray-700">Capacity</label>
+                    <input type="number" id="capacity" name="capacity" min="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
+                </div>
+            `;
+        } else if (type === 'courses') {
+            content += `
+                <div class="mb-4">
+                    <label for="lecturer_ids" class="block text-sm font-medium text-gray-700">Lecturers</label>
+                    <select id="lecturer_ids" name="lecturer_ids" class="mt-1 w-full" multiple="multiple">
+                        {% for lecturer in all_lecturers_list | sort(attribute='name') %}
+                        <option value="{{ lecturer._id }}">{{ lecturer.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label for="department_ids" class="block text-sm font-medium text-gray-700">Departments</label>
+                    <select id="department_ids" name="department_ids" class="mt-1 w-full" multiple="multiple">
+                        {% for dept in all_departments_list | sort(attribute='name') %}
+                        <option value="{{ dept._id }}">{{ dept.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label for="number_of_lectures_per_week" class="block text-sm font-medium text-gray-700">Lectures per Week</label>
+                    <input type="number" id="number_of_lectures_per_week" name="number_of_lectures_per_week" min="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
+                </div>
+                <div class="mb-4">
+                    <label for="number_of_students" class="block text-sm font-medium text-gray-700">Number of Students</label>
+                    <input type="number" id="number_of_students" name="number_of_students" min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
+                </div>
+                <div class="mb-4">
+                    <label for="level" class="block text-sm font-medium text-gray-700">Level</label>
+                    <input type="text" id="level" name="level" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" placeholder="e.g., 100L, 200L, 300L" required>
+                </div>
+            `;
+        }
+        modalContentContainer.innerHTML = content;
+
+        // Initialize Select2 for the new dropdowns
+        if (type === 'lecturers' || type === 'courses') {
+            initSelect2('#department_ids');
+            if (type === 'courses') {
+                initSelect2('#lecturer_ids');
+            }
+        }
+
+        if (item) {
+            document.getElementById('name').value = item.name;
+
+            if (type === 'lecturers' && item.department_ids) {
+                $('#department_ids').val(item.department_ids).trigger('change');
+            } else if (type === 'rooms') {
+                if (item.capacity) {
+                    document.getElementById('capacity').value = item.capacity;
                 }
-            });
+            } else if (type === 'courses') {
+                if (item.lecturer_ids) {
+                    $('#lecturer_ids').val(item.lecturer_ids).trigger('change');
+                }
+                if (item.department_ids) {
+                    $('#department_ids').val(item.department_ids).trigger('change');
+                }
+                if (item.number_of_lectures_per_week) {
+                    document.getElementById('number_of_lectures_per_week').value = item.number_of_lectures_per_week;
+                }
+                if (item.number_of_students) {
+                    document.getElementById('number_of_students').value = item.number_of_students;
+                }
+                if (item.level) {
+                    document.getElementById('level').value = item.level;
+                }
+            }
         }
     }
-    
-    let currentAddType = '';
-    
-    function showAddModal(type) {
-        currentAddType = type;
-        const modal = document.getElementById('add-modal');
-        const modalTitle = document.getElementById('modal-title');
-        const modalBody = document.getElementById('modal-body');
 
-        modal.classList.remove('hidden');
-
-        if (type === 'lecturer') {
-            modalTitle.textContent = "Add New Lecturer";
-            modalBody.innerHTML = `
-                <form id="add-lecturer-form">
-                    <div class="mt-4">
-                        <label class="block text-sm font-medium text-gray-700">Name</label>
-                        <input type="text" name="name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
-                    </div>
-                </form>
-            `;
-        } else if (type === 'room') {
-            modalTitle.textContent = "Add New Room";
-            modalBody.innerHTML = `
-                <form id="add-room-form">
-                    <div class="mt-4">
-                        <label class="block text-sm font-medium text-gray-700">Name</label>
-                        <input type="text" name="name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
-                    </div>
-                    <div class="mt-4">
-                        <label class="block text-sm font-medium text-gray-700">Capacity</label>
-                        <input type="number" name="capacity" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
-                    </div>
-                </form>
-            `;
-        } else if (type === 'department') {
-            modalTitle.textContent = "Add New Department";
-            modalBody.innerHTML = `
-                <form id="add-department-form">
-                    <div class="mt-4">
-                        <label class="block text-sm font-medium text-gray-700">Department Name</label>
-                        <input type="text" name="name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
-                    </div>
-                </form>
-            `;
-        } else if (type === 'course') {
-            const lecturerOptions = `
-                {% for lecturer in lecturers %}
-                <label class="flex items-center space-x-2 py-2 px-3 hover:bg-gray-100 cursor-pointer">
-                    <input type="checkbox" name="lecturers" value="{{ lecturer.name }}" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                    <span class="text-gray-900">{{ lecturer.name }}</span>
-                </label>
-                {% endfor %}
-            `;
-
-            const departmentOptions = `
-                {% for department in all_departments %}
-                <label class="flex items-center space-x-2 py-2 px-3 hover:bg-gray-100 cursor-pointer">
-                    <input type="checkbox" name="departments" value="{{ department }}" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                    <span class="text-gray-900">{{ department }}</span>
-                </label>
-                {% endfor %}
-            `;
-
-            modalTitle.textContent = "Add New Course";
-            modalBody.innerHTML = `
-                <form id="add-course-form">
-                    <div class="mt-4">
-                        <label class="block text-sm font-medium text-gray-700">Course Name</label>
-                        <input type="text" name="name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
-                    </div>
-                    <div class="mt-4 relative">
-                        <label class="block text-sm font-medium text-gray-700">Lecturer(s)</label>
-                        <button type="button" id="lecturer-dropdown-btn" class="mt-1 block w-full cursor-pointer rounded-md border border-gray-300 bg-white py-2 px-3 text-left shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" aria-haspopup="true" aria-expanded="false">
-                            <span id="selected-lecturers">Select lecturers...</span>
-                            <span class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                                <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                </svg>
-                            </span>
-                        </button>
-                        <div id="lecturer-dropdown" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg hidden">
-                            <div class="max-h-60 overflow-y-auto">
-                                ${lecturerOptions}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mt-4">
-                        <label class="block text-sm font-medium text-gray-700">Lectures per Week</label>
-                        <input type="number" name="lectures_per_week" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
-                    </div>
-                    <div class="mt-4">
-                        <label class="block text-sm font-medium text-gray-700">Level</label>
-                        <input type="text" name="level" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
-                    </div>
-                    <div class="mt-4 relative">
-                        <label class="block text-sm font-medium text-gray-700">Department(s)</label>
-                        <button type="button" id="department-dropdown-btn" class="mt-1 block w-full cursor-pointer rounded-md border border-gray-300 bg-white py-2 px-3 text-left shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" aria-haspopup="true" aria-expanded="false">
-                            <span id="selected-departments">Select departments...</span>
-                            <span class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                                <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                </svg>
-                            </span>
-                        </button>
-                        <div id="department-dropdown" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg hidden">
-                            <div class="max-h-60 overflow-y-auto">
-                                ${departmentOptions}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mt-4">
-                        <label class="block text-sm font-medium text-gray-700">Student Count</label>
-                        <input type="number" name="student_count" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
-                    </div>
-                </form>
-            `;
-            
-            // Add event listeners for the new dropdowns
-            setTimeout(() => {
-                const setupDropdownWithCheckboxes = (dropdownId, buttonId, selectedSpanId) => {
-                    const dropdownBtn = document.getElementById(buttonId);
-                    const dropdown = document.getElementById(dropdownId);
-                    const selectedSpan = document.getElementById(selectedSpanId);
-
-                    if (!dropdownBtn || !dropdown || !selectedSpan) return;
-
-                    dropdownBtn.addEventListener('click', () => {
-                        const isExpanded = dropdownBtn.getAttribute('aria-expanded') === 'true' || false;
-                        dropdownBtn.setAttribute('aria-expanded', !isExpanded);
-                        dropdown.classList.toggle('hidden');
-                    });
-                    
-                    dropdown.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-                        checkbox.addEventListener('change', () => {
-                            const selected = Array.from(dropdown.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
-                            selectedSpan.textContent = selected.length > 0 ? selected.join(', ') : 'Select ' + selectedSpanId.replace('selected-', '').replace(/s$/, '') + 's...';
-                        });
-                    });
-
-                    document.addEventListener('click', (event) => {
-                        if (!dropdownBtn.contains(event.target) && !dropdown.contains(event.target)) {
-                            dropdown.classList.add('hidden');
-                            dropdownBtn.setAttribute('aria-expanded', 'false');
-                        }
-                    });
-                };
-
-                setupDropdownWithCheckboxes('lecturer-dropdown', 'lecturer-dropdown-btn', 'selected-lecturers');
-                setupDropdownWithCheckboxes('department-dropdown', 'department-dropdown-btn', 'selected-departments');
-
-            }, 0);
-        }
-    }
-    
     function closeModal() {
-        document.getElementById('add-modal').classList.add('hidden');
+        modal.classList.add('hidden');
+        form.reset();
+        itemIdInput.value = '';
+        modalContentContainer.innerHTML = '';
+        // Destroy Select2 instances to prevent issues
+        if (isSelect2Initialized) {
+            $('.select2-hidden-accessible').select2('destroy');
+            isSelect2Initialized = false;
+        }
     }
-    
-    function submitAddForm() {
-        let formId = '';
-        let url = '';
-        let data = {};
 
-        if (currentAddType === 'lecturer') {
-            formId = 'add-lecturer-form';
-            url = '/add_teacher';
-        } else if (currentAddType === 'room') {
-            formId = 'add-room-form';
-            url = '/add_room';
-        } else if (currentAddType === 'department') {
-            formId = 'add-department-form';
-            url = '/add_department';
-        } else if (currentAddType === 'course') {
-            formId = 'add-course-form';
-            url = '/add_course';
+    function openAddModal(type) {
+        modalTitle.textContent = `Add New ${type.slice(0, -1).charAt(0).toUpperCase() + type.slice(0, -1).slice(1)}`;
+        form.action = `/add_data/${type}`;
+        itemIdInput.value = ''; // Ensure item-id is empty for new additions
+        generateFormContent(type);
+        modal.classList.remove('hidden');
+    }
+
+    async function openEditModal(type, id) {
+        modalTitle.textContent = `Edit ${type.slice(0, -1).charAt(0).toUpperCase() + type.slice(0, -1).slice(1)}`;
+        form.action = `/update_data/${type}/${id}`;
+        itemIdInput.value = id;
+
+        try {
+            const response = await fetch(`/get_data/${type}/${id}`);
+            const result = await response.json();
+
+            if (result.success) {
+                generateFormContent(type, result.data);
+                modal.classList.remove('hidden');
+            } else {
+                alert('Failed to load data for editing: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            alert('An error occurred while fetching data.');
+        }
+    }
+
+    function handleFormSubmit(event) {
+        event.preventDefault();
+        const type = activeTab;
+        const id = itemIdInput.value;
+        const formAction = id ? `/update_data/${type}/${id}` : `/add_data/${type}`;
+
+        const data = {
+            name: document.getElementById('name').value
+        };
+
+        if (type === 'lecturers') {
+            data.department_ids = $('#department_ids').val();
+        } else if (type === 'rooms') {
+            data.capacity = parseInt(document.getElementById('capacity').value, 10);
+        } else if (type === 'courses') {
+            data.lecturer_ids = $('#lecturer_ids').val();
+            data.department_ids = $('#department_ids').val();
+            data.number_of_lectures_per_week = parseInt(document.getElementById('number_of_lectures_per_week').value, 10);
+            data.number_of_students = parseInt(document.getElementById('number_of_students').value, 10);
+            data.level = document.getElementById('level').value; // New field
         }
 
-        const form = document.getElementById(formId);
-        const formData = new FormData(form);
-
-        fetch(url, {
+        fetch(formAction, {
             method: 'POST',
-            body: formData
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
         }).then(response => response.json())
-          .then(data => {
-            if (data.success) {
-                alert(data.message);
+        .then(result => {
+            if (result.success) {
+                alert(result.message);
                 closeModal();
                 window.location.reload();
             } else {
-                alert(data.message);
+                alert('Failed to save data: ' + result.message);
             }
+        }).catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while saving the data.');
         });
+    }
+
+    function deleteData(type, id) {
+        if (confirm("Are you sure you want to delete this item?")) {
+            fetch(`/delete_data/${type}/${id}`, {
+                method: 'DELETE'
+            }).then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert(result.message);
+                    window.location.reload();
+                } else {
+                    alert('Failed to delete item: ' + result.message);
+                }
+            }).catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while trying to delete the item.');
+            });
+        }
     }
 </script>
 {% endblock %}
