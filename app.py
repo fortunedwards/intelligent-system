@@ -1,4 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, send_file, flash
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 import os
@@ -15,7 +17,14 @@ import json
 from bson.errors import InvalidId
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'
+app.secret_key = os.environ.get('SECRET_KEY', 'your_secret_key')
+
+# Initialize rate limiter
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"]
+)
 
 # Replace with your actual MongoDB URI
 MONGO_URI = "mongodb+srv://fortunedwards:oselumese@universityschedulerclus.rqbvhmw.mongodb.net/?retryWrites=true&w=majority&appName=UniversitySchedulerCluster"
@@ -28,6 +37,35 @@ courses_collection = db['courses']
 saved_timetables_collection = db['saved_timetables']
 departments_collection = db['departments']
 
+# Create database indexes for better performance
+def create_indexes():
+    try:
+        teachers_collection.create_index([('name', 1)])
+        rooms_collection.create_index([('name', 1), ('capacity', 1)])
+        courses_collection.create_index([('name', 1), ('level', 1)])
+        departments_collection.create_index([('name', 1)])
+        saved_timetables_collection.create_index([('created_at', -1)])
+    except Exception as e:
+        print(f"Index creation warning: {e}")
+
+# Simple in-memory cache
+cache = {}
+cache_timeout = 300  # 5 minutes
+
+def get_cached_data(key):
+    if key in cache:
+        data, timestamp = cache[key]
+        if datetime.now().timestamp() - timestamp < cache_timeout:
+            return data
+        del cache[key]
+    return None
+
+def set_cache_data(key, data):
+    cache[key] = (data, datetime.now().timestamp())
+
+def clear_cache():
+    cache.clear()
+
 
 # --- Settings Management ---
 SETTINGS_FILE = 'settings.json'
@@ -36,7 +74,11 @@ DEFAULT_SETTINGS = {
     'ga_generations': 200,
     'ga_mutation_rate': 0.05,
     'ga_crossover_rate': 0.7,
-    'max_lecturer_hours_per_week': 20
+    'max_lecturer_hours_per_week': 20,
+    'enable_soft_constraints': True,
+    'workload_balance_weight': 0.3,
+    'preference_weight': 0.2,
+    'support_variable_durations': True
 }
 
 def load_settings():
@@ -65,6 +107,16 @@ if not os.path.exists(SETTINGS_FILE):
     save_settings(DEFAULT_SETTINGS)
 
 # --- Helper Functions ---
+def get_collection_by_type(data_type):
+    """Helper function to get collection by type name"""
+    collections = {
+        'lecturers': teachers_collection,
+        'rooms': rooms_collection,
+        'departments': departments_collection,
+        'courses': courses_collection
+    }
+    return collections.get(data_type)
+
 def convert_objectids_to_strings(data):
     if isinstance(data, ObjectId):
         return str(data)
@@ -101,8 +153,134 @@ while current_time < end_time_obj:
     display_time_slots.append(f"{current_time.strftime('%I:%M %p')} - {end_of_slot.strftime('%I:%M %p')}")
     current_time = end_of_slot
 
-# --- Constraint Satisfaction (Backtracking) Algorithm ---
-def backtracking_algorithm(courses, rooms, teachers):
+# --- Genetic Algorithm Implementation ---
+def genetic_algorithm(courses, rooms, teachers):
+    settings = get_settings()
+    population_size = settings.get('ga_population_size', 100)
+    generations = settings.get('ga_generations', 200)
+    mutation_rate = settings.get('ga_mutation_rate', 0.05)
+    crossover_rate = settings.get('ga_crossover_rate', 0.7)
+    
+    all_courses = {str(c['_id']): c for c in courses}
+    all_rooms = {str(r['_id']): r for r in rooms}
+    all_teachers = {str(t['_id']): t for t in teachers}
+    
+    events_to_schedule = []
+    for course in courses:
+        for _ in range(course.get('number_of_lectures_per_week', 0)):
+            events_to_schedule.append(course['_id'])
+    
+    if not events_to_schedule:
+        return []
+    
+    def create_individual():
+        individual = []
+        for course_id in events_to_schedule:
+            day = random.choice(DAYS)
+            time_slot = random.choice(time_slots)
+            room = random.choice(rooms)
+            individual.append({
+                'course_id': course_id,
+                'room_id': room['_id'],
+                'day': day,
+                'time_slot': time_slot
+            })
+        return individual
+    
+    def fitness(individual):
+        conflicts = 0
+        occupied_slots_room = defaultdict(list)
+        occupied_slots_lecturer = defaultdict(list)
+        occupied_slots_level_dept = defaultdict(list)
+        
+        for event in individual:
+            course_data = all_courses.get(str(event['course_id']))
+            if not course_data:
+                conflicts += 10
+                continue
+                
+            day_time = (event['day'], event['time_slot'])
+            
+            # Room conflicts
+            if event['room_id'] in occupied_slots_room[day_time]:
+                conflicts += 5
+            occupied_slots_room[day_time].append(event['room_id'])
+            
+            # Lecturer conflicts
+            course_lecturer_ids = course_data.get('lecturer_ids', [])
+            for lid in course_lecturer_ids:
+                if lid in occupied_slots_lecturer[day_time]:
+                    conflicts += 5
+                occupied_slots_lecturer[day_time].append(lid)
+            
+            # Student group conflicts
+            course_level = course_data.get('level')
+            course_department_ids = course_data.get('department_ids', [])
+            for dept_id in course_department_ids:
+                level_dept = (course_level, str(dept_id))
+                if level_dept in occupied_slots_level_dept[day_time]:
+                    conflicts += 3
+                occupied_slots_level_dept[day_time].append(level_dept)
+            
+            # Room capacity
+            room_data = all_rooms.get(str(event['room_id']))
+            if room_data and room_data.get('capacity', 0) < course_data.get('number_of_students', 0):
+                conflicts += 2
+        
+        return 1000 - conflicts  # Higher fitness = fewer conflicts
+    
+    def crossover(parent1, parent2):
+        if random.random() > crossover_rate:
+            return parent1, parent2
+        
+        point = random.randint(1, len(parent1) - 1)
+        child1 = parent1[:point] + parent2[point:]
+        child2 = parent2[:point] + parent1[point:]
+        return child1, child2
+    
+    def mutate(individual):
+        for i in range(len(individual)):
+            if random.random() < mutation_rate:
+                individual[i]['day'] = random.choice(DAYS)
+                individual[i]['time_slot'] = random.choice(time_slots)
+                individual[i]['room_id'] = random.choice(rooms)['_id']
+        return individual
+    
+    # Initialize population
+    population = [create_individual() for _ in range(population_size)]
+    
+    best_individual = None
+    best_fitness = -1
+    
+    for generation in range(generations):
+        # Evaluate fitness
+        fitness_scores = [(individual, fitness(individual)) for individual in population]
+        fitness_scores.sort(key=lambda x: x[1], reverse=True)
+        
+        # Track best solution
+        if fitness_scores[0][1] > best_fitness:
+            best_fitness = fitness_scores[0][1]
+            best_individual = fitness_scores[0][0][:]
+            
+            # If perfect solution found, return early
+            if best_fitness >= 1000:
+                return best_individual
+        
+        # Selection (top 50%)
+        selected = [ind for ind, _ in fitness_scores[:population_size//2]]
+        
+        # Create new population
+        new_population = selected[:]
+        
+        while len(new_population) < population_size:
+            parent1 = random.choice(selected)
+            parent2 = random.choice(selected)
+            child1, child2 = crossover(parent1[:], parent2[:])
+            new_population.extend([mutate(child1), mutate(child2)])
+        
+        population = new_population[:population_size]
+    
+    return best_individual if best_fitness > 900 else None
     all_courses = {str(c['_id']): c for c in courses}
     all_rooms = {str(r['_id']): r for r in rooms}
     all_teachers = {str(t['_id']): t for t in teachers}
@@ -345,23 +523,30 @@ def delete_saved_timetable(timetable_id):
     return jsonify({'success': False, 'message': 'Timetable not found.'})
 
 @app.route('/data_management/<type>')
+@limiter.limit("30 per minute")
 def data_management(type):
-    data = []
-    if type == 'lecturers':
-        data = list(teachers_collection.find().sort("name", 1))
-    elif type == 'rooms':
-        data = list(rooms_collection.find().sort("name", 1))
-    elif type == 'departments':
-        data = list(departments_collection.find().sort("name", 1))
-    elif type == 'courses':
-        data = list(courses_collection.find().sort("name", 1))
+    # Try to get from cache first
+    cache_key = f"data_management_{type}"
+    cached_data = get_cached_data(cache_key)
+    
+    if cached_data:
+        data, all_departments, all_lecturers, all_departments_list, all_lecturers_list = cached_data
+    else:
+        collection = get_collection_by_type(type)
+        if not collection:
+            data = []
+        else:
+            data = list(collection.find().sort("name", 1))
+        
+        all_departments = {str(d['_id']): d['name'] for d in departments_collection.find()}
+        all_lecturers = {str(l['_id']): l['name'] for l in teachers_collection.find()}
+        all_departments_list = convert_objectids_to_strings(list(departments_collection.find()))
+        all_lecturers_list = convert_objectids_to_strings(list(teachers_collection.find()))
+        
+        # Cache the results
+        set_cache_data(cache_key, (data, all_departments, all_lecturers, all_departments_list, all_lecturers_list))
     
     data = convert_objectids_to_strings(data)
-    
-    all_departments = {str(d['_id']): d['name'] for d in departments_collection.find()}
-    all_lecturers = {str(l['_id']): l['name'] for l in teachers_collection.find()}
-    all_departments_list = convert_objectids_to_strings(list(departments_collection.find()))
-    all_lecturers_list = convert_objectids_to_strings(list(teachers_collection.find()))
     
     return render_template(
         'data_management.html',
@@ -375,6 +560,7 @@ def data_management(type):
     )
 
 @app.route('/add_data/<type>', methods=['POST'])
+@limiter.limit("10 per minute")
 def add_data(type):
     new_data = request.json
     
@@ -391,21 +577,15 @@ def add_data(type):
         new_data['number_of_students'] = int(new_data.get('number_of_students', 0))
         new_data['level'] = new_data.get('level', 'Unknown')
         courses_collection.insert_one(new_data)
-        
+    
+    # Clear cache after data modification
+    clear_cache()
     return jsonify({'success': True, 'message': f'{type.capitalize()} added successfully.'})
 
 @app.route('/get_data/<type>/<item_id>')
 def get_data(type, item_id):
-    collection = None
-    if type == 'lecturers':
-        collection = teachers_collection
-    elif type == 'rooms':
-        collection = rooms_collection
-    elif type == 'departments':
-        collection = departments_collection
-    elif type == 'courses':
-        collection = courses_collection
-    else:
+    collection = get_collection_by_type(type)
+    if not collection:
         return jsonify({'success': False, 'message': 'Invalid data type.'}), 400
     
     try:
@@ -421,15 +601,8 @@ def get_data(type, item_id):
 
 @app.route('/delete_data/<type>/<item_id>', methods=['DELETE'])
 def delete_data(type, item_id):
-    if type == 'lecturers':
-        collection = teachers_collection
-    elif type == 'rooms':
-        collection = rooms_collection
-    elif type == 'departments':
-        collection = departments_collection
-    elif type == 'courses':
-        collection = courses_collection
-    else:
+    collection = get_collection_by_type(type)
+    if not collection:
         return jsonify({'success': False, 'message': 'Invalid data type.'}), 400
     
     try:
@@ -438,6 +611,7 @@ def delete_data(type, item_id):
         return jsonify({'success': False, 'message': 'Invalid ID format.'}), 400
 
     if result.deleted_count == 1:
+        clear_cache()  # Clear cache after deletion
         return jsonify({'success': True, 'message': f'{type.capitalize()} deleted successfully.'})
     else:
         return jsonify({'success': False, 'message': f'Could not find {type} with ID {item_id}.'}), 404
@@ -445,17 +619,14 @@ def delete_data(type, item_id):
 @app.route('/update_data/<type>/<item_id>', methods=['POST'])
 def update_data(type, item_id):
     new_data = request.json
+    collection = get_collection_by_type(type)
+    if not collection:
+        return jsonify({'success': False, 'message': 'Invalid data type.'}), 400
     
-    if type == 'lecturers':
-        collection = teachers_collection
-    elif type == 'rooms':
-        collection = rooms_collection
-        if 'capacity' in new_data:
-            new_data['capacity'] = int(new_data['capacity'])
-    elif type == 'departments':
-        collection = departments_collection
+    # Type-specific data processing
+    if type == 'rooms' and 'capacity' in new_data:
+        new_data['capacity'] = int(new_data['capacity'])
     elif type == 'courses':
-        collection = courses_collection
         if 'department_ids' in new_data:
             new_data['department_ids'] = [ObjectId(did) for did in new_data['department_ids']]
         if 'lecturer_ids' in new_data:
@@ -463,8 +634,6 @@ def update_data(type, item_id):
         if 'number_of_students' in new_data:
             new_data['number_of_students'] = int(new_data['number_of_students'])
         new_data['level'] = new_data.get('level', 'Unknown')
-    else:
-        return jsonify({'success': False, 'message': 'Invalid data type.'}), 400
     
     try:
         result = collection.update_one({'_id': ObjectId(item_id)}, {'$set': new_data})
@@ -472,6 +641,7 @@ def update_data(type, item_id):
         return jsonify({'success': False, 'message': 'Invalid ID format.'}), 400
 
     if result.matched_count == 1:
+        clear_cache()  # Clear cache after update
         return jsonify({'success': True, 'message': f'{type.capitalize()} updated successfully.'})
     else:
         return jsonify({'success': False, 'message': f'Could not find {type} with ID {item_id}.'}), 404
@@ -522,7 +692,7 @@ def generate_timetable_route():
         flash('Cannot generate a timetable. Please ensure you have added courses with at least one lecture per week.', 'warning')
         return render_template('timetable.html', timetable={}, time_slots=display_time_slots, days=DAYS, departments=all_departments, page_title="Generated Timetable", is_saved=False, active_page='generate_timetable')
 
-    best_individual = backtracking_algorithm(all_courses, all_rooms, all_teachers)
+    best_individual = genetic_algorithm(all_courses, all_rooms, all_teachers)
     
     if best_individual is None:
         flash('Could not generate a conflict-free timetable. Please check your data and constraints.', 'error')
@@ -603,9 +773,47 @@ def get_departments():
 
 @app.route('/get_lecturers', methods=['GET'])
 def get_lecturers():
-    lecturers = list(teachers_collection.find())
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 50, type=int)
+    skip = (page - 1) * per_page
+    
+    lecturers = list(teachers_collection.find().skip(skip).limit(per_page))
+    total = teachers_collection.count_documents({})
     lecturers = convert_objectids_to_strings(lecturers)
-    return jsonify(lecturers)
+    
+    return jsonify({
+        'data': lecturers,
+        'pagination': {
+            'page': page,
+            'per_page': per_page,
+            'total': total,
+            'pages': (total + per_page - 1) // per_page
+        }
+    })
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint for monitoring"""
+    try:
+        # Test database connection
+        db.command('ping')
+        return jsonify({
+            'status': 'healthy',
+            'timestamp': datetime.now().isoformat(),
+            'database': 'connected',
+            'cache_size': len(cache)
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'status': 'unhealthy',
+            'timestamp': datetime.now().isoformat(),
+            'error': str(e)
+        }), 503
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Initialize database indexes on startup
+    create_indexes()
+    
+    # Use environment variable for debug mode
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    app.run(debug=debug_mode, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
